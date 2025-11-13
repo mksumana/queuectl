@@ -1,81 +1,182 @@
-# queuectl — Background Job Queue (Python starter)
+# queuectl — Background Job Queue (Python, Windows)
 
-This repository contains a **single-file, production-minded starter** implementation of the `queuectl` CLI described in the assignment. It implements job persistence (SQLite), workers, retries with exponential backoff, a dead letter queue (DLQ), config management and a small test script.
+A minimal CLI-based background job queue system supporting workers, retries with exponential backoff, a Dead Letter Queue (DLQ), job persistence (SQLite), and configuration.
 
-## Files included
+This README includes **all Windows PowerShell commands** needed to run, test, and record the assignment demo.
 
-- `queuectl.py` — Main CLI program (Python 3.9+). Run this file for all operations.
-- `test_flow.sh` — Small shell script that demonstrates the main flows.
-- `README.md` — This file.
+---
 
-## Quick start
+# 📦 Requirements
 
-Make the main script executable and run workers:
+- Windows 10/11  
+- Python 3.9+  
+- PowerShell  
 
-```bash
-chmod +x queuectl.py
-./queuectl.py worker start --count 2
+---
+
+# 🛠️ Setup (PowerShell)
+
+## 1. Go to project folder
+
+```powershell
+cd "C:\Users\<YourUser>\Downloads\queuectl"
 ```
 
-Enqueue a job in another terminal:
+## 2. Create & activate virtual environment
 
-```bash
-./queuectl.py enqueue '{"id":"job-hello","command":"echo Hello World","max_retries":3}'
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate
 ```
 
-List pending jobs:
+---
 
-```bash
-./queuectl.py list --state pending
+# 🚀 Running the System (For Demo Video)
+
+You will use **two PowerShell terminals**:
+
+- **Terminal 1 → workers**
+- **Terminal 2 → enqueue + status + dlq**
+
+---
+
+# 🟦 Terminal 1 — Start Workers
+
+```powershell
+cd "C:\Users\<YourUser>\Downloads\queuectl"
+.\venv\Scripts\Activate
+python queuectl.py worker start --count 2
 ```
 
-View DLQ:
+This terminal stays running.  
+It will show job processing, retries, backoff, and DLQ transitions.
 
-```bash
-./queuectl.py dlq list
+---
+
+# 🟩 Terminal 2 — Enqueue Jobs & Check Status
+
+Activate environment:
+
+```powershell
+cd "C:\Users\<YourUser>\Downloads\queuectl"
+.\venv\Scripts\Activate
 ```
 
-Retry a DLQ job:
+### Enqueue example jobs:
 
-```bash
-./queuectl.py dlq retry <job-id>
+```powershell
+python queuectl.py enqueue --file examples\job_success.json
+python queuectl.py enqueue --file examples\job_fail.json
+python queuectl.py enqueue --file examples\job_sleep.json
 ```
 
-Set configuration (globally stored in DB):
+---
 
-```bash
-./queuectl.py config set max_retries 5
-./queuectl.py config set backoff_base 3
-./queuectl.py config get
+# 📊 Check Job States
+
+```powershell
+python queuectl.py status
 ```
 
-Stop workers (from another terminal):
+List jobs:
 
-```bash
-./queuectl.py worker stop
+```powershell
+python queuectl.py list --state pending
+python queuectl.py list --state processing
+python queuectl.py list --state completed
+python queuectl.py list --state failed
+python queuectl.py list --state dead
 ```
 
-## Architecture notes
+---
 
-- **Persistence**: SQLite (`queue.db`) with WAL mode. Jobs stored with available_at epoch seconds so retries can be delayed.
-- **Workers**: Each `worker start` runs a single process with N threads (use `--count N`). Within each thread jobs are claimed using a short `BEGIN IMMEDIATE` transaction to avoid races.
-- **Locking**: Claiming a job uses `UPDATE` inside a transaction to ensure only one worker gets it.
-- **Retry/backoff**: On failure, `attempts` increments. If `attempts > max_retries` job is moved to `dead`. Otherwise job state becomes `failed` and `available_at` is set to `now + base^attempts`.
-- **DLQ**: `state='dead'` represents the DLQ. `dlq retry` resets attempts and moves job back to pending.
-- **Graceful shutdown**: `SIGINT`/`SIGTERM` sets a stop flag so workers finish current job then exit.
+# 🟥 Dead Letter Queue (DLQ)
 
-## Testing instructions
+### List dead jobs:
 
-1. Run `chmod +x queuectl.py` and `./queuectl.py worker start --count 2` in one terminal.
-2. In another terminal run the `test_flow.sh` example or enqueue jobs manually.
-3. Observe the worker terminal processing jobs, failing and moving to DLQ after retries.
-4. Restart the worker process and verify jobs persist.
+```powershell
+python queuectl.py dlq list
+```
 
-## Next improvements / bonus tasks
+### Retry a dead job:
 
-- Job timeout handling (kill long-running jobs)
-- Job priority and scheduled jobs (run_at)
-- Job output logging files
-- Small web dashboard for live monitoring
-- Unit tests with a temporary SQLite DB and mocking subprocess
+```powershell
+python queuectl.py dlq retry job_fail
+```
+
+Workers in Terminal 1 will pick it again.
+
+---
+
+# ⚙️ Configuration Management
+
+View current config:
+
+```powershell
+python queuectl.py config get
+```
+
+Update config:
+
+```powershell
+python queuectl.py config set max_retries 5
+python queuectl.py config set backoff_base 3
+```
+
+---
+
+# 🔄 Persistence Test (Required)
+
+1. Enqueue a job  
+2. Stop both terminals  
+3. Open Terminal 1 again  
+4. Start workers  
+5. In Terminal 2 run `status`  
+
+Jobs are still present because of SQLite persistence.
+
+---
+
+# 🧪 Automated Test Script (Optional)
+
+Allow script execution:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+Run:
+
+```powershell
+.\scripts\test_flow.ps1
+```
+
+---
+
+# 🧩 Architecture Overview (Minimal)
+
+- **SQLite** database used for persistence  
+- Workers run in threads, each holding its own DB connection  
+- Job claiming uses a transactional `UPDATE` to avoid duplicates  
+- Retry uses exponential backoff: `delay = base^attempts`  
+- After exceeding retries, job moves to state `dead` (DLQ)  
+- `dlq retry <id>` resets attempts and moves job back to pending  
+- Workers exit gracefully after finishing their current job  
+
+---
+
+```
+## 🎥 Demo Video
+https://drive.google.com/
+```
+
+# ✅ Submission Checklist
+
+- [x] All required commands functional  
+- [x] Jobs persist after restart  
+- [x] Retry + exponential backoff working  
+- [x] Dead Letter Queue operational  
+- [x] CLI documented  
+- [x] Code maintainable  
+- [x] Test script included  
 
