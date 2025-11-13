@@ -1,0 +1,4 @@
+{
+  "id": "job_fail",
+  "command": "wrongCommandXYZ"
+}

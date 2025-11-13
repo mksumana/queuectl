@@ -1,0 +1,4 @@
+{
+  "id": "job_sleep",
+  "command": "ping 127.0.0.1 -n 3 >nul && echo slept"
+}

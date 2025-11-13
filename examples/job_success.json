@@ -1,0 +1,4 @@
+{
+  "id": "job_success",
+  "command": "echo Hello World"
+}
