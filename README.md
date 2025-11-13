@@ -167,7 +167,7 @@ Run:
 
 ```
 ## 🎥 Demo Video
-https://drive.google.com/
+https://drive.google.com/drive/folders/1u-hxCR-YnULgAlgsuJn4WBBn-bCWsCOp?usp=sharing
 ```
 
 # ✅ Submission Checklist
